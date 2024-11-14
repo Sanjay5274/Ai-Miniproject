@@ -1,0 +1,75 @@
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
+import pickle
+
+file_path = "/content/Dataset.csv" 
+
+try:
+    df = pd.read_csv(file_path)
+    print("Dataset loaded successfully!")
+except Exception as e:
+    print(f"Error loading dataset: {e}")
+    exit()
+
+df.fillna(df.mean(), inplace=True)
+
+X = df.drop(columns=['HeartDisease'])
+y = df['HeartDisease']
+
+scaler = StandardScaler()
+X = scaler.fit_transform(X)
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+model = RandomForestClassifier(random_state=42)
+model.fit(X_train, y_train)
+
+y_pred = model.predict(X_test)
+print("Accuracy:", accuracy_score(y_test, y_pred))
+print("Confusion Matrix:\n", confusion_matrix(y_test, y_pred))
+print("Classification Report:\n", classification_report(y_test, y_pred))
+
+with open("heart_disease_model.pkl", "wb") as f:
+    pickle.dump(model, f)
+with open("scaler.pkl", "wb") as f:
+    pickle.dump(scaler, f)
+
+with open("heart_disease_model.pkl", "rb") as f:
+    loaded_model = pickle.load(f)
+with open("scaler.pkl", "rb") as f:
+    loaded_scaler = pickle.load(f)
+
+print("Enter the following health details for prediction:")
+
+try:
+    age = int(input("Age: "))
+    sex = int(input("Sex (1 = Male, 0 = Female): "))
+    chest_pain = int(input("Chest Pain Type (0-3): "))
+    resting_bp = int(input("Resting Blood Pressure: "))
+    cholesterol = int(input("Cholesterol Level: "))
+    fasting_bs = int(input("Fasting Blood Sugar (1 = True, 0 = False): "))
+    resting_ecg = int(input("Resting ECG Results (0-2): "))
+    max_hr = int(input("Maximum Heart Rate Achieved: "))
+    exercise_angina = int(input("Exercise-Induced Angina (1 = Yes, 0 = No): "))
+    oldpeak = float(input("Oldpeak (ST Depression): "))
+    st_slope = int(input("ST Slope (0-2): "))
+except ValueError:
+    print("Invalid input. Please enter valid numbers.")
+    exit()
+
+columns = ['Age', 'Sex', 'ChestPainType', 'RestingBP', 'Cholesterol', 'FastingBS', 
+           'RestingECG', 'MaxHR', 'ExerciseAngina', 'Oldpeak', 'ST_Slope']
+
+user_data = pd.DataFrame([[age, sex, chest_pain, resting_bp, cholesterol, fasting_bs,
+                           resting_ecg, max_hr, exercise_angina, oldpeak, st_slope]], 
+                         columns=columns)
+
+user_data = loaded_scaler.transform(user_data)
+
+prediction = loaded_model.predict(user_data)
+result = "Heart Disease Detected" if prediction[0] == 1 else "No Heart Disease Detected"
+print("\nPrediction:", result)
